@@ -27,23 +27,15 @@ import java.util.Scanner;
 
 import java.security.SecureRandom;
 
-public class Main {
-    public static Scanner scanner = new Scanner(System.in);
-    static class User {
-        public User(String ModelName, String ModelPassword){
-            name = ModelName;
-            password = ModelPassword;
-        }
-        String name;
-        String password;
-        List<Site> sites = Arrays.asList();
+class App{
+    static MongoCollection<Document> users;
+    static Scanner scanner = new Scanner(System.in);
+
+    public App(MongoDatabase db){
+        MongoCollection<Document> usersList = db.getCollection("users");
+        users = usersList;
     }
-    class Site{
-        String url;
-        String name;
-        String password;
-    }
-    public static void mainMenu(MongoCollection<Document> users){
+    public static void mainMenu(){
         System.out.println("======================================");
         System.out.println("1. Rejestracja");
         System.out.println("2. Logowanie");
@@ -55,12 +47,12 @@ public class Main {
         if(option==1){
             System.out.println("======================================");
             System.out.println("Wybrano opcje Rejestracja");
-            registerUser(users);
+            registerUser();
         }
         else if(option==2){
             System.out.println("======================================");
             System.out.println("Wybrano opcje Logowanie");
-            logInUser(users);
+            logInUser();
         }
         else if(option==3){
             System.out.println("======================================");
@@ -72,7 +64,7 @@ public class Main {
         }
 
     }
-    public static void registerUser(MongoCollection<Document> users){
+    public static void registerUser(){
         System.out.println("Wprowadź dane użytkownika: ");
         System.out.println("Nazwa użytkownika: ");
         scanner.nextLine();
@@ -92,19 +84,19 @@ public class Main {
                 users.insertOne(newUser);
 
                 System.out.println("Użytkownik zarejestrowany. ");
-                mainMenu(users);
+                mainMenu();
             }
             else{
                 System.out.println("Taki użytkownik już istnieje.");
-                mainMenu(users);
+                mainMenu();
             }
         }
         catch(Exception e){
             System.out.println("Rejestracja nie powiodla się.");
-            mainMenu(users);
+            mainMenu();
         }
     }
-    public static void logInUser(MongoCollection<Document> users){
+    public static void logInUser(){
         System.out.println("Wprowadź dane użytkownika: ");
         System.out.println("Nazwa użytkownika: ");
         scanner.nextLine();
@@ -117,23 +109,20 @@ public class Main {
 
         if(user == null){
             System.out.println("Nieprawidłowe dane.");
-            mainMenu(users);
+            mainMenu();
         }
 
         if(Objects.equals(user.get("password").toString(), paswd.toString())){
             System.out.println("Poprawnie zalogowano.");
             Object userId = user.get("_id");
-            loggedMenu(users, userId);
+            loggedMenu(userId);
         }
         else{
             System.out.println("Nieprawidłowe dane.");
-            mainMenu(users);
+            mainMenu();
         }
-
-
-
     }
-    public static void loggedMenu(MongoCollection<Document> users, Object userId){
+    public static void loggedMenu(Object userId){
         System.out.println("======================================");
         System.out.println("1. Dodaj hasło.");
         System.out.println("2. Wyświetl hasła.");
@@ -167,11 +156,11 @@ public class Main {
             Document result = users.findOneAndUpdate(filter, update, options);
             if(result != null){
                 System.out.println("Pomyślnie dodano do bazy.");
-                loggedMenu(users, userId);
+                loggedMenu(userId);
             }
             else {
                 System.out.println("Nie dodano do bazy.");
-                loggedMenu(users, userId);
+                loggedMenu(userId);
             }
         }
         else if(option==2){
@@ -182,34 +171,31 @@ public class Main {
             List<Document> list = result.getList("sites", Document.class);
             for (Document obj : list) {System.out.println(
                     "Strona: " + obj.get("name").toString() + " " +
-                    "Login: " + obj.get("login").toString() + " " +
-                    "Hasło: " + obj.get("password").toString());}
-            loggedMenu(users, userId);
+                            "Login: " + obj.get("login").toString() + " " +
+                            "Hasło: " + obj.get("password").toString());}
+            loggedMenu(userId);
         }
         else if(option==3){
             System.out.println("Wybrano wylogowanie.");
-            mainMenu(users);
+            mainMenu();
         }
         else{
             System.out.println("Nie ma takiej opcji.");
-            loggedMenu(users, userId);
+            loggedMenu(userId);
         }
     }
+}
+
+
+public class Main {
     public static void main(String[] args) {
         MongoClient client = MongoClients.create("mongodb+srv://admin:admin@project.ksjanfd.mongodb.net/?retryWrites=true&w=majority");
 
         MongoDatabase db = client.getDatabase("java_project");
 
-        MongoCollection<Document> users = db.getCollection("users");
-        /*
-        Document newUser = new Document()
-                .append("name", "Test")
-                .append("password", "Password")
-                .append("sites", Arrays.asList()); //rejestracja
+        App application = new App(db);
 
-        users.insertOne(newUser);
-        */
-        mainMenu(users);
+        application.mainMenu();
 
     }
 }
